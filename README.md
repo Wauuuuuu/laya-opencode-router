@@ -22,7 +22,7 @@ An OpenCode model router for macOS. A local Laya classifier selects a model tier
 ```sh
 git clone https://github.com/Wauuuuuu/laya-opencode-router.git
 cd laya-opencode-router
-./install.sh
+sh install.sh
 ```
 
 安装脚本将插件链接到 `~/.config/opencode/plugins/laya-router`，在 `~/.config/laya-opencode-router` 下创建配置、虚拟环境和控制窗口，并在 `~/Library/LaunchAgents` 写入按需启动的服务定义。不会覆盖已有配置或已有插件路径。如果 OpenCode 使用自定义配置目录，可设置 `OPENCODE_CONFIG_DIR` 后再运行安装脚本。安装后在 `~/.config/laya-opencode-router/settings.json` 中填写你可用的模型 ID，重启 OpenCode 后台服务，输入 `/laya` 选择各档模型。
