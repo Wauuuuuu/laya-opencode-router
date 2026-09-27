@@ -8,8 +8,8 @@ import time
 import uvicorn
 from laya.serve import create_app
 
-HOST = "127.0.0.1"
-PORT = 8766
+HOST = os.environ.get("LAYA_HOST", "127.0.0.1")
+PORT = int(os.environ.get("LAYA_PORT", "8766"))
 IDLE_SECONDS = int(os.environ.get("LAYA_IDLE_SECONDS", "90"))
 
 app = create_app()
