@@ -1,0 +1,13 @@
+.DS_Store
+.venv/
+hf-cache/
+checkpoints/
+*.log
+*.app/
+settings.json
+status.json
+context.json
+*.sqlite*
+node_modules/
+__pycache__/
+*.pyc

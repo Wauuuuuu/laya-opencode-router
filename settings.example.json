@@ -1,0 +1,11 @@
+{
+  "enabled": false,
+  "models": {
+    "local": { "providerID": "openai", "id": "gpt-6-luna" },
+    "standard": { "providerID": "openai", "id": "gpt-6-sol" },
+    "advanced": { "providerID": "openai", "id": "gpt-6-sol" },
+    "classifier": { "providerID": "openai", "id": "gpt-6-luna" },
+    "fallback": { "providerID": "openai", "id": "gpt-6-sol" },
+    "file_search": { "providerID": "openai", "id": "gpt-6-luna" }
+  }
+}
