@@ -27,11 +27,12 @@ fi
 if [ ! -x "$ROUTER_HOME/.venv/bin/python" ]; then
   "$PYTHON" -m venv "$ROUTER_HOME/.venv"
 fi
-"$ROUTER_HOME/.venv/bin/python" -m pip install 'laya==0.3.20' 'uvicorn==0.54.0'
+"$ROUTER_HOME/.venv/bin/python" -m pip install 'laya[serve]==0.3.20'
+"$ROUTER_HOME/.venv/bin/python" -c 'import fastapi, uvicorn; from laya.serve import create_app'
 
 APP="$ROUTER_HOME/Laya Router.app"
 mkdir -p "$APP/Contents/MacOS"
-swiftc "$REPO/control/Control.swift" -framework AppKit -lsqlite3 -o "$APP/Contents/MacOS/Laya Router"
+swiftc "$REPO/control/Control.swift" -framework AppKit -o "$APP/Contents/MacOS/Laya Router"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -69,5 +70,5 @@ with agent.open("wb") as output:
     plistlib.dump(value, output)
 PY
 
-echo "Installed. Edit $ROUTER_HOME/settings.json and add the Laya MCP server in OpenCode."
+echo "Installed. Edit $ROUTER_HOME/settings.json and enable routing in /laya."
 echo "Restart the OpenCode background service before using /laya."

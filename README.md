@@ -1,21 +1,19 @@
 # Laya × OpenCode Router
 
-一个适用于 macOS 的 OpenCode 自动模型路由插件。它用本机 [Laya](https://huggingface.co/convaiinnovations/laya) 判断任务复杂度，再让 OpenCode 为当前会话选择模型。Laya 服务按需启动，空闲 90 秒后退出；分类失败时可由备用模型接手。`/laya` 打开控制窗口，`!manual` 可让单条消息保留手动选择的模型。
-
-An OpenCode model router for macOS. A local Laya classifier selects a model tier before each prompt. It includes a small control app, fallback classification, and filename lookup.
+一个适用于 macOS 和 OpenCode V2 的自动模型路由插件。明确简单或复杂的请求直接按规则分配；其他请求才调用本机 Laya。Laya 分类失败时使用备用分类模型。`/laya` 打开控制窗口，`!manual` 保留当前手选模型并从提示词中移除该指令。
 
 ## 功能
 
-- 按简单、常规、复杂任务分配模型；每档模型在控制窗口中选择。
-- Laya 无法分类时使用备用分类模型；再次失败则使用最终处理模型。
-- 对只查找单个本地文件名或路径的请求，先用 Spotlight 找候选路径，再交给指定模型回答。这是文件名检索，不读取文件内容，也不建立向量索引。
-- 与当前工作区的 Laya MCP 开关同步；关闭 MCP 后停止自动路由。
+- 简单、常规、复杂任务分别选择模型；开关和模型 ID 保存在 `settings.json`。
+- Laya HTTP 服务按需启动，空闲 90 秒后退出。首次模型加载或下载最多等待 180 秒，已预热推理最多等待 30 秒。
+- 可选接入本地 MLX 网关。选中本地模型前等待网关启动模型；切回云模型后延迟请求关闭。网关也会在没有活动请求时自动卸载模型。
+- 文件名检索默认只向回答模型提供文件名；用户明确询问位置时才提供以 `~` 开头的主目录相对路径。
 
 ## 要求
 
-- macOS、OpenCode Desktop，以及可运行 `swiftc` 的 Xcode Command Line Tools。
-- Python 3.10 或更新版本。安装脚本会安装 `laya==0.3.20` 和 `uvicorn==0.54.0`。
-- 在 OpenCode 中已配置所选模型，并为工作区配置名为 `laya` 的 MCP 服务。模型权重由 Laya 自行获取，**不包含在本仓库中**。
+- macOS、OpenCode V2、Xcode Command Line Tools、Python 3.10 或更新版本。
+- 在 OpenCode 中已经配置需要使用的模型。安装脚本安装 `laya[serve]==0.3.20`；Laya 权重由其发布者提供，不包含在仓库中。
+- 可选的本地执行模型需要自行安装 MLX 运行环境和模型文件；本仓库不分发 Qwen 或其他模型权重。
 
 ## 安装
 
@@ -25,41 +23,45 @@ cd laya-opencode-router
 sh install.sh
 ```
 
-安装脚本将插件链接到 `~/.config/opencode/plugins/laya-router`，在 `~/.config/laya-opencode-router` 下创建配置、虚拟环境和控制窗口，并在 `~/Library/LaunchAgents` 写入按需启动的服务定义。不会覆盖已有配置或已有插件路径。如果 OpenCode 使用自定义配置目录，可设置 `OPENCODE_CONFIG_DIR` 后再运行安装脚本。安装后在 `~/.config/laya-opencode-router/settings.json` 中填写你可用的模型 ID，重启 OpenCode 后台服务，输入 `/laya` 选择各档模型。
+安装脚本将插件链接到 `~/.config/opencode/plugins/laya-router`，在 `~/.config/laya-opencode-router` 创建配置、虚拟环境和控制窗口，并写入 Laya 的 LaunchAgent。它不会覆盖已有的 `settings.json` 或其他插件路径。自定义 OpenCode 配置目录可设置 `OPENCODE_CONFIG_DIR`。安装后填写 `~/.config/laya-opencode-router/settings.json` 中可用的模型 ID，重启 OpenCode 后台服务，输入 `/laya` 开启路由。
 
-在 OpenCode 全局配置的 `mcp.servers` 中添加名为 `laya` 的本地服务，命令指向 `~/.config/laya-opencode-router/.venv/bin/laya-mcp-server` 的**展开后绝对路径**，并将 `HF_HOME` 指向 `~/.config/laya-opencode-router/hf-cache` 的展开后绝对路径。例如：
+**从旧版本升级：** 路由开关现在只由 `settings.json` 的 `enabled` 字段控制。旧版 OpenCode 配置中的 `laya` MCP 服务可删除；新版本不使用它，也不调用 OpenCode 的 experimental MCP 接口。安装脚本保留现有 `settings.json`，请检查其 `enabled` 值。
+
+## 可选：本地 MLX 模型
+
+仓库提供 `service/local_model_gateway.py`。网关只监听本机，按需启动 `mlx_vlm.server`（可在配置中改为其他兼容的服务器模块），代理 OpenAI 兼容请求，并在空闲后关闭它启动的模型进程。网关本身必须先运行；模型进程由网关按需管理。
+
+1. 将 `local-model.example.json` 复制到 `~/.config/laya-opencode-router/local-model.json`，填写本机 Python、模型文件路径和端口。`mlx_python` 所在环境必须已安装所选服务器模块。
+2. 运行 `python3 service/local_model_gateway.py`，或用你自己的进程管理器保持网关运行。不要在已有网关使用相同端口时再启动第二份。
+3. 在 OpenCode 配置本地供应商，`baseURL` 指向 `http://127.0.0.1:8787/v1`，模型 ID 与 `local-model.json` 的 `model_id` 相同。
+4. 在路由 `settings.json` 添加以下配置，`providerID` 应与 OpenCode 本地供应商 ID 相同，并在控制窗口选用该供应商的模型：
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "laya": {
-        "type": "local",
-        "command": ["/Users/YOU/.config/laya-opencode-router/.venv/bin/laya-mcp-server"],
-        "environment": {
-          "HF_HOME": "/Users/YOU/.config/laya-opencode-router/hf-cache",
-          "LAYA_DEVICE": "mps",
-          "LAYA_PRELOAD": "0"
-        }
-      }
-    }
+  "localModel": {
+    "providerID": "local-mlx",
+    "gatewayURL": "http://127.0.0.1:8787",
+    "startupTimeoutMs": 300000,
+    "stopGraceMs": 45000
   }
 }
 ```
 
-插件以当前工作区的 Laya MCP 开关状态决定是否自动路由。控制窗口依赖 OpenCode Desktop 的模型 API；模型显示状态读取取决于 Desktop 本地数据库格式，读取失败时仍可使用完整模型目录。设置 `OPENCODE_DRAFTS_DB` 可覆盖数据库路径。
+如果本地模型启动失败，路由器会改用已配置的最终处理模型。网关在有活动请求时拒绝关闭，之后按自己的空闲计时器关闭模型。网关只管理它自己启动的进程，不会终止其他应用启动的模型服务。
 
-## 配置与文件
+## 文件
 
 | 路径 | 用途 |
 | --- | --- |
-| `plugin/index.js` | OpenCode 插件源码 |
+| `plugin/index.js` | OpenCode 路由和本地网关控制 |
 | `service/idle_server.py` | Laya HTTP 服务与空闲退出 |
-| `control/Control.swift` | 原生 macOS 控制窗口源码 |
-| `settings.example.json` | 不含个人信息的模型配置示例 |
+| `service/local_model_gateway.py` | 可选 MLX 模型生命周期网关 |
+| `control/Control.swift` | 原生 macOS 控制窗口 |
+| `settings.example.json` | 路由配置示例 |
+| `local-model.example.json` | 本地 MLX 网关配置示例 |
 
-运行时文件、模型缓存、日志、数据库和密钥均不在仓库中。默认服务端口是 `127.0.0.1:8766`。此项目不由 OpenCode 或 Laya 官方维护。
+运行时配置、模型权重、日志、数据库和密钥不在仓库中。本项目不由 OpenCode、Laya 或 MLX 官方维护。
 
 ## License
 
-MIT。Laya 模型及其权重遵循各自发布者的许可，本仓库不分发模型权重。
+MIT。Laya 和本地模型及其权重遵循各自发布者的许可。

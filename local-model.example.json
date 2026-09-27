@@ -1,0 +1,11 @@
+{
+  "mlx_python": "/ABSOLUTE/PATH/TO/MLX/PYTHON",
+  "model_path": "/ABSOLUTE/PATH/TO/MODEL",
+  "model_id": "qwen-local",
+  "server_module": "mlx_vlm.server",
+  "gateway_port": 8787,
+  "backend_port": 8788,
+  "startup_timeout": 300,
+  "request_timeout": 3600,
+  "idle_timeout_seconds": 90
+}
